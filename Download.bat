@@ -25,16 +25,41 @@ set "VERSION="
 :check
 echo: Vérification de base...
 ping 1.1.1.1 -n 1 -w 1000 > nul
-if errorlevel 1 (Echo.Could not Ping 1.1.1.1, Attempting backup pings.) else (goto internet_trouver)
+if errorlevel 1 (
+    Echo: Impossible de ping 1.1.1.1, Tentative de résolution.
+) else (
+    goto internet_trouver
+)
 ping 8.8.8.8 -n 1 -w 2000 > nul
-if errorlevel 1 (Echo.Could not Ping 8.8.8.8, Attempting backup pings.) else (goto internet_trouver)
+if errorlevel 1 (
+    Echo: Impossible de ping 8.8.8.8, Tentative de résolution.
+) else (
+    goto internet_trouver
+)
 ping github.com -n 1 -w 2000 > nul
-if errorlevel 1 (Echo.Could not Ping github.com, Exiting Script && timeout 5 > nul && exit) else (goto internet_trouver)
+if errorlevel 1 (
+    Echo: Could not Ping github.com, Exiting Script
+    timeout 5 > nul 
+    exit
+) else (
+    goto internet_trouver
+)
+
 :internet_trouver
-for %%# in (powershell.exe) do @if "%%~$PATH:#"=="" (echo.Could not find Powershell. && pause && exit)
+curl.exe -V > nul
+if errorlevel 1 (
+    echo Impossible de trouver curl. Veuillez l'installer. 
+    pause 
+    exit
+)
+echo: Curl trouvé.
+for %%# in (powershell.exe) do @if "%%~$PATH:#"=="" (echo: Impossible de trouver Powershell. && pause && exit)
 echo: Powershell trouvé.
+timeout 1 >nul
+
 :: verif si le dossier yt-dlp est présent
 if not exist "%DOSSIER%" (
+    echo: création du dossier yt-dlp.
     mkdir "c:\yt-dlp"
 )
 
@@ -103,12 +128,6 @@ set /P lien=Collez votre lien youtube.com :
 call :demande_dest
 exit /b 
 
-:demande_dest
-
-for /f "usebackq" %%D in (`powershell -command "(new-object -com Shell.Application).BrowseForFolder(0, 'Sélectionnez un dossier', 0).self.path"`) do set "DEST_DOSSIER=%%D"
-exit /b
-
-
 :yt_date
 :: Stocker la date de la dernière release dans une variable
 for /f "delims=" %%A in ('powershell -NoProfile -Command "(Invoke-WebRequest -Uri '%URL_YT%' -UseBasicParsing | ConvertFrom-Json).published_at.Substring(0,10)"') do set "GITHUB_DATE=%%A"
@@ -123,7 +142,7 @@ call :yt_date
 :: téléchargement yt-dlp.exe
 cls
 echo: Téléchargement de la dernière version de YT-DLP...
-powershell -c "Invoke-WebRequest -Uri 'https://github.com/yt-dlp/yt-dlp/releases/download/%GITHUB_DATE%/yt-dlp.exe' -OutFile 'C:\yt-dlp\yt-dlp.exe'">nul
+curl https://github.com/yt-dlp/yt-dlp/releases/download/%GITHUB_DATE%/yt-dlp.exe -o "%FICHIER_YT%" -s -L
 :: vérifie le téléchargement.
 if exist "%FICHIER_YT%" (
     exit /b
@@ -139,7 +158,9 @@ if exist "%FICHIER_YT%" (
 cls
 mode con cols=74 lines=6
 echo: Téléchargement de la dernière version de FFMPEG.
-powershell -c "Invoke-WebRequest -Uri '%DOWNLOAD_FFMPEG%' -OutFile '%FICHIER_FFMPEG_ZIP%'"
+curl "%DOWNLOAD_FFMPEG%" -o "%FICHIER_FFMPEG_ZIP%" -s -L
+goto extract_ffmpeg
+
 :extract_ffmpeg
 mkdir "%DOSSIER%\FFMPEG"
 tar xf "%FICHIER_FFMPEG_ZIP%" -C "%DOSSIER%\FFMPEG"
@@ -153,17 +174,6 @@ del /s /q %FICHIER_FFMPEG_ZIP%>nul
 rmdir /s /q %DOSSIER%\FFMPEG>nul
 exit /b
 
-
-:DOWNLOAD_YT_reussi
-
-color 0A
-
-echo ======================================================
-echo.
-echo       Félicitations ! L'opération a réussi !
-echo.
-echo ======================================================
-exit /b
 
 :troubleshoot
 call :download_yt
@@ -192,7 +202,6 @@ mode con cols=158 lines=30
 cd "C:\yt-dlp"
 C:\yt-dlp\yt-dlp.exe %lien% -P "%DEST_DOSSIER%" -f "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4] / bv*+ba/b"
 explorer %DEST_DOSSIER%
-call :download_reussi
 goto :main_menu
 
 :: téléchargement en MP3
@@ -204,3 +213,7 @@ C:\yt-dlp\yt-dlp.exe %lien% -P "%DEST_DOSSIER%" -f "ba/b" --recode-video mp3
 explorer %DEST_DOSSIER%
 call :download_reussi
 goto :main_menu
+
+:demande_dest
+for /f "usebackq" %%D in (`powershell -command "(new-object -com Shell.Application).BrowseForFolder(0, 'Sélectionnez un dossier', 0).self.path"`) do set "DEST_DOSSIER=%%D"
+exit /b
