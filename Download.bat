@@ -258,7 +258,7 @@ goto main_menu
 :mp4
 call :demande_lien
 mode con cols=158 lines=30
-%DOSSIER%\yt-dlp.exe %lien% -P "%DEST_DOSSIER%" -f "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4] / bv*+ba/b"
+%DOSSIER%\yt-dlp.exe %lien% -P "%DEST_DOSSIER%" -f "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4] / bv*+ba/b" -S vcodec:h264
 explorer %DEST_DOSSIER%
 goto :main_menu
 
